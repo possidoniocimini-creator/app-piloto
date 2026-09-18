@@ -5,4 +5,6 @@ export function createAnthropicClient() {
   return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 }
 
-export const MENTOR_MODEL = "claude-opus-5";
+// Sonnet em vez de Opus: reduz bastante o custo por sessão mantendo boa
+// qualidade de conversa — decisão consciente de custo pro piloto.
+export const MENTOR_MODEL = "claude-sonnet-5";

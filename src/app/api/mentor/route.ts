@@ -68,7 +68,9 @@ export async function POST(request: Request) {
       const response = await anthropic.messages.create({
         model: MENTOR_MODEL,
         max_tokens: 2000,
-        system,
+        // O roteiro da sessão é sempre o mesmo texto a cada mensagem dessa
+        // conversa — cachear evita pagar o preço cheio dele em toda mensagem.
+        system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
         tools: MENTOR_TOOLS,
         messages,
       });
