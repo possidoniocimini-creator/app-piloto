@@ -91,6 +91,58 @@ export function computeCycleProgress(
   };
 }
 
+export type LongTermProgress = {
+  fillPercent: number;
+  perfectDays: number;
+  goalDurationDays: number;
+  goalReached: boolean;
+};
+
+/**
+ * Progresso do avatar de longo prazo: acumula os "dias perfeitos" desde o início do
+ * ciclo (sem reset — diferente da conquista de 21 dias) e divide pelo prazo que a
+ * própria pessoa definiu pra o objetivo dela (goal_duration_days).
+ */
+export function computeLongTermProgress(
+  habits: Habit[],
+  entries: ChecklistEntry[],
+  cycleStartDate: string | null,
+  goalDurationDays: number
+): LongTermProgress {
+  const activeHabits = habits.filter((h) => h.active);
+  const todayKey = toDateKey(new Date());
+  const safeDuration = goalDurationDays > 0 ? goalDurationDays : 180;
+
+  if (!cycleStartDate || activeHabits.length === 0) {
+    return { fillPercent: 0, perfectDays: 0, goalDurationDays: safeDuration, goalReached: false };
+  }
+
+  const completedByHabitAndDate = new Set(
+    entries.filter((e) => e.completed).map((e) => `${e.habit_id}__${e.entry_date}`)
+  );
+
+  let perfectDays = 0;
+  let cursor = cycleStartDate;
+
+  while (cursor < todayKey) {
+    const weekday = new Date(cursor + "T00:00:00Z").getUTCDay();
+    const scheduledHabits = activeHabits.filter((h) => h.weekdays.includes(weekday));
+
+    if (scheduledHabits.length > 0) {
+      const perfectDay = scheduledHabits.every((h) =>
+        completedByHabitAndDate.has(`${h.id}__${cursor}`)
+      );
+      if (perfectDay) perfectDays += 1;
+    }
+
+    cursor = addDays(cursor, 1);
+  }
+
+  const fillPercent = Math.min(100, Math.round((perfectDays / safeDuration) * 100));
+
+  return { fillPercent, perfectDays, goalDurationDays: safeDuration, goalReached: fillPercent >= 100 };
+}
+
 export function habitsForWeekday(habits: Habit[], weekday: number) {
   return habits.filter((h) => h.active && h.weekdays.includes(weekday));
 }
