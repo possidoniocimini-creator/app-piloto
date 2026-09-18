@@ -1,7 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { MENTOR_SESSIONS } from "@/lib/mentor/sessions";
-import { MentorChat } from "@/components/MentorChat";
 import { LessonSessionForm } from "@/components/LessonSessionForm";
 import type { HabitDraft } from "@/components/HabitBuilder";
 
@@ -32,39 +31,7 @@ export default async function OnboardingStepPage({
     redirect("/login");
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("onboarding_mode")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile?.onboarding_mode) {
-    redirect("/onboarding");
-  }
-
-  if (profile.onboarding_mode === "chat") {
-    const { data: messages } = await supabase
-      .from("mentor_messages")
-      .select("role, content")
-      .eq("user_id", user.id)
-      .eq("session_number", session.number)
-      .order("created_at", { ascending: true });
-
-    return (
-      <MentorChat
-        sessionNumber={session.number}
-        totalSessions={MENTOR_SESSIONS.length}
-        title={session.title}
-        subtitle={session.subtitle}
-        initialMessages={(messages ?? []).map((m) => ({
-          role: m.role as "user" | "assistant",
-          content: m.content,
-        }))}
-      />
-    );
-  }
-
-  const [{ data: answerRows }, { data: videoRow }, habitsData] = await Promise.all([
+  const [{ data: answerRows }, { data: videoRow }, habitsData, { data: profileRow }] = await Promise.all([
     supabase
       .from("onboarding_answers")
       .select("question_key, answer")
@@ -82,6 +49,7 @@ export default async function OnboardingStepPage({
           .eq("user_id", user.id)
           .order("created_at", { ascending: true })
       : Promise.resolve({ data: null }),
+    supabase.from("profiles").select("goal_duration_days").eq("id", user.id).single(),
   ]);
 
   const initialAnswers: Record<string, string> = {};
@@ -112,6 +80,7 @@ export default async function OnboardingStepPage({
       initialAnswers={initialAnswers}
       initialHabits={initialHabits}
       originalHabitIds={originalHabitIds}
+      initialGoalDurationDays={profileRow?.goal_duration_days ?? 180}
     />
   );
 }

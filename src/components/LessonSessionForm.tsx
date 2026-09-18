@@ -27,6 +27,8 @@ function toYoutubeEmbed(url: string): string | null {
   }
 }
 
+const DURATION_OPTIONS_MONTHS = [1, 2, 3, 6, 9, 12];
+
 export function LessonSessionForm({
   session,
   totalSessions,
@@ -35,6 +37,7 @@ export function LessonSessionForm({
   initialAnswers,
   initialHabits,
   originalHabitIds,
+  initialGoalDurationDays,
 }: {
   session: MentorSession;
   totalSessions: number;
@@ -43,6 +46,7 @@ export function LessonSessionForm({
   initialAnswers: Record<string, string>;
   initialHabits: HabitDraft[];
   originalHabitIds: string[];
+  initialGoalDurationDays: number;
 }) {
   const router = useRouter();
   const supabase = createClient();
@@ -51,12 +55,48 @@ export function LessonSessionForm({
   const [habits, setHabits] = useState<HabitDraft[]>(
     initialHabits.length > 0 ? initialHabits : session.number === 4 ? [createEmptyHabit()] : []
   );
+  const [durationMonths, setDurationMonths] = useState<number>(
+    Math.max(1, Math.round(initialGoalDurationDays / 30))
+  );
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [generating, setGenerating] = useState(false);
 
   const isHabitStep = session.number === 4;
+  const isGoalStep = session.number === 2;
   const isLastStep = session.number === totalSessions;
   const embedUrl = videoUrl ? toYoutubeEmbed(videoUrl) : null;
+
+  async function generateAgenda() {
+    setGenerating(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/onboarding/generate-agenda", { method: "POST" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error ?? "Não foi possível gerar a agenda.");
+      }
+      const data: { habits: { title: string; description: string; weekdays: number[] }[] } =
+        await res.json();
+
+      const generated: HabitDraft[] = data.habits.map((h) => ({
+        id: `temp-${Math.random().toString(36).slice(2)}-${Date.now()}`,
+        title: h.title,
+        description: h.description,
+        weekdays: h.weekdays,
+        isNew: true,
+      }));
+
+      setHabits((prev) => {
+        const manuallyFilled = prev.filter((h) => h.title.trim().length > 0);
+        return [...manuallyFilled, ...generated];
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível gerar a agenda.");
+    } finally {
+      setGenerating(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -140,6 +180,9 @@ export function LessonSessionForm({
       const profileUpdate: Record<string, unknown> = {
         onboarding_step: Math.min(session.number + 1, totalSessions + 1),
       };
+      if (isGoalStep) {
+        profileUpdate.goal_duration_days = durationMonths * 30;
+      }
       if (isLastStep) {
         profileUpdate.onboarding_completed = true;
         profileUpdate.cycle_start_date = new Date().toISOString().slice(0, 10);
@@ -207,7 +250,48 @@ export function LessonSessionForm({
         ))}
       </div>
 
-      {isHabitStep && <HabitBuilder habits={habits} onChange={setHabits} />}
+      {isGoalStep && (
+        <div className="card space-y-3">
+          <label className="label mb-0" htmlFor="goal-duration">
+            Em quanto tempo você quer atingir esse objetivo?
+          </label>
+          <p className="helper-text mt-0">
+            É esse prazo que define o ritmo em que seu avatar vai encher lá no checklist.
+          </p>
+          <select
+            id="goal-duration"
+            className="input-field"
+            value={durationMonths}
+            onChange={(e) => setDurationMonths(Number(e.target.value))}
+          >
+            {DURATION_OPTIONS_MONTHS.map((m) => (
+              <option key={m} value={m}>
+                {m} {m === 1 ? "mês" : "meses"}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {isHabitStep && (
+        <div className="space-y-4">
+          <div className="card flex flex-col items-center gap-3 text-center">
+            <p className="text-white/70">
+              Já respondeu tudo acima? Deixa a IA montar sua agenda semanal a partir do que você
+              escreveu nas sessões anteriores — depois você pode ajustar cada hábito à vontade.
+            </p>
+            <button
+              type="button"
+              onClick={generateAgenda}
+              disabled={generating}
+              className="btn-primary"
+            >
+              {generating ? "Gerando sua agenda..." : "Gerar minha agenda com IA"}
+            </button>
+          </div>
+          <HabitBuilder habits={habits} onChange={setHabits} />
+        </div>
+      )}
 
       {error && <p className="text-sm text-accent-danger">{error}</p>}
 
