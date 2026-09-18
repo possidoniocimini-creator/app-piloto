@@ -1,11 +1,10 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { ONBOARDING_SESSIONS } from "@/lib/onboarding-content";
-import { OnboardingForm } from "@/components/OnboardingForm";
-import type { HabitDraft } from "@/components/HabitBuilder";
+import { MENTOR_SESSIONS } from "@/lib/mentor/sessions";
+import { MentorChat } from "@/components/MentorChat";
 
 export function generateStaticParams() {
-  return ONBOARDING_SESSIONS.map((s) => ({ step: `sessao-${s.number}` }));
+  return MENTOR_SESSIONS.map((s) => ({ step: `sessao-${s.number}` }));
 }
 
 export default async function OnboardingStepPage({
@@ -16,7 +15,7 @@ export default async function OnboardingStepPage({
   const { step } = await params;
   const match = step.match(/^sessao-(\d)$/);
   const sessionNumber = match ? Number(match[1]) : null;
-  const session = ONBOARDING_SESSIONS.find((s) => s.number === sessionNumber);
+  const session = MENTOR_SESSIONS.find((s) => s.number === sessionNumber);
 
   if (!session) {
     notFound();
@@ -31,45 +30,23 @@ export default async function OnboardingStepPage({
     redirect("/login");
   }
 
-  const { data: answerRows } = await supabase
-    .from("onboarding_answers")
-    .select("question_key, answer")
+  const { data: messages } = await supabase
+    .from("mentor_messages")
+    .select("role, content")
     .eq("user_id", user.id)
-    .eq("session_number", session.number);
-
-  const initialAnswers: Record<string, string> = {};
-  for (const row of answerRows ?? []) {
-    initialAnswers[row.question_key] = row.answer;
-  }
-
-  let initialHabits: HabitDraft[] = [];
-  let originalHabitIds: string[] = [];
-
-  if (session.number === 4) {
-    const { data: habitRows } = await supabase
-      .from("habits")
-      .select("id, title, description, weekdays")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: true });
-
-    initialHabits = (habitRows ?? []).map((h) => ({
-      id: h.id,
-      title: h.title,
-      description: h.description ?? "",
-      weekdays: h.weekdays,
-      isNew: false,
-    }));
-    originalHabitIds = initialHabits.map((h) => h.id);
-  }
+    .eq("session_number", session.number)
+    .order("created_at", { ascending: true });
 
   return (
-    <OnboardingForm
-      session={session}
-      totalSessions={ONBOARDING_SESSIONS.length}
-      userId={user.id}
-      initialAnswers={initialAnswers}
-      initialHabits={initialHabits}
-      originalHabitIds={originalHabitIds}
+    <MentorChat
+      sessionNumber={session.number}
+      totalSessions={MENTOR_SESSIONS.length}
+      title={session.title}
+      subtitle={session.subtitle}
+      initialMessages={(messages ?? []).map((m) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      }))}
     />
   );
 }

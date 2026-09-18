@@ -54,23 +54,45 @@ create trigger on_auth_user_created
   for each row execute procedure public.handle_new_user();
 
 -- ----------------------------------------------------------------------------
--- ONBOARDING_ANSWERS: respostas das 5 sessões (texto livre / reflexão)
+-- MENTOR_MESSAGES: histórico de conversa de cada sessão do mentor IA
 -- Dados sensíveis/pessoais -> só o dono acessa
 -- ----------------------------------------------------------------------------
-create table if not exists public.onboarding_answers (
+create table if not exists public.mentor_messages (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
   session_number int not null check (session_number between 1 and 5),
-  question_key text not null,
-  answer text not null default '',
-  updated_at timestamptz not null default now(),
-  unique (user_id, session_number, question_key)
+  role text not null check (role in ('user', 'assistant')),
+  content text not null,
+  created_at timestamptz not null default now()
 );
 
-alter table public.onboarding_answers enable row level security;
+alter table public.mentor_messages enable row level security;
 
-create policy "Usuário gerencia as próprias respostas"
-  on public.onboarding_answers for all
+create policy "Usuário gerencia as próprias mensagens do mentor"
+  on public.mentor_messages for all
+  to authenticated
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create index if not exists mentor_messages_user_session_idx
+  on public.mentor_messages (user_id, session_number, created_at);
+
+-- ----------------------------------------------------------------------------
+-- ONBOARDING_SESSION_SUMMARIES: status e resumo de cada uma das 5 sessões
+-- ----------------------------------------------------------------------------
+create table if not exists public.onboarding_session_summaries (
+  user_id uuid not null references auth.users (id) on delete cascade,
+  session_number int not null check (session_number between 1 and 5),
+  summary text,
+  completed boolean not null default false,
+  completed_at timestamptz,
+  primary key (user_id, session_number)
+);
+
+alter table public.onboarding_session_summaries enable row level security;
+
+create policy "Usuário gerencia o próprio progresso nas sessões"
+  on public.onboarding_session_summaries for all
   to authenticated
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);

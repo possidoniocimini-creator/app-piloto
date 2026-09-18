@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { ONBOARDING_SESSIONS } from "@/lib/onboarding-content";
+import { MENTOR_SESSIONS } from "@/lib/mentor/sessions";
 
 export default async function OnboardingIndexPage() {
   const supabase = await createClient();
@@ -22,6 +22,6 @@ export default async function OnboardingIndexPage() {
     redirect("/dashboard");
   }
 
-  const step = Math.min(profile?.onboarding_step ?? 1, ONBOARDING_SESSIONS.length);
+  const step = Math.min(profile?.onboarding_step ?? 1, MENTOR_SESSIONS.length);
   redirect(`/onboarding/sessao-${step}`);
 }
