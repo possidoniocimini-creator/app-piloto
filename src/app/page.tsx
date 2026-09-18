@@ -19,17 +19,19 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-8 px-4 text-center">
-      <div className="space-y-4">
+    <div className="relative flex min-h-screen flex-col items-center justify-center gap-8 overflow-hidden px-4 text-center">
+      <div className="pointer-events-none absolute inset-0 bg-flame-radial" />
+      <div className="relative space-y-4">
         <h1 className="text-4xl font-bold text-white sm:text-5xl">
-          Vire quem você <span className="text-brand">decidiu ser</span>.
+          Vire quem você{" "}
+          <span className="bg-flame bg-clip-text text-transparent">decidiu ser</span>.
         </h1>
         <p className="mx-auto max-w-xl text-white/60">
           Mapeie seu eu ideal, monte seu checklist diário e conquiste seus 21 dias — junto com
           uma comunidade que cresce com você.
         </p>
       </div>
-      <div className="flex gap-4">
+      <div className="relative flex gap-4">
         <Link href="/cadastro" className="btn-primary">
           Começar agora
         </Link>
