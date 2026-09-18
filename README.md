@@ -17,9 +17,10 @@ Este guia assume que você **nunca usou nada disso**. Siga na ordem.
 5. Abra o arquivo [`supabase/schema.sql`](./supabase/schema.sql) deste projeto, copie **tudo**
    e cole no editor do Supabase. Clique em **Run**. Isso cria todas as tabelas, as regras de
    segurança e as 4 aulas iniciais.
-6. Se você já vinha rodando uma versão anterior do piloto (formulário em vez de mentor IA),
-   também rode o arquivo [`supabase/002_ai_mentor.sql`](./supabase/002_ai_mentor.sql) — ele só
-   adiciona as tabelas novas do mentor IA, sem apagar nada do que já existe.
+6. Se você já vinha rodando uma versão anterior do piloto, também rode, nesta ordem:
+   [`supabase/002_ai_mentor.sql`](./supabase/002_ai_mentor.sql) e
+   [`supabase/003_lesson_mode.sql`](./supabase/003_lesson_mode.sql) — só adicionam tabelas
+   novas, sem apagar nada do que já existe.
 7. Vá em **Project Settings** (ícone de engrenagem) → **API**. Você vai ver duas informações
    que precisa copiar:
    - **Project URL**
@@ -98,13 +99,15 @@ A forma mais simples é usar a [Vercel](https://vercel.com) (grátis pra esse vo
 
 ## Como o produto funciona (resumo técnico)
 
-- **Onboarding** (`/onboarding`): um mentor IA conduz 5 sessões de chat baseadas no seu método
-  (diagnóstico e visão, objetivo de curto prazo, habilidades e personagem, hábitos dos 21 dias,
-  mentalidade). Ele não só pergunta — ele **ensina** cada conceito com a sua metodologia antes
-  de perguntar, e só avança de sessão quando cobre tudo e a pessoa confirma que não tem
-  dúvidas. Na **sessão 4**, o mentor monta com a pessoa a agenda semanal completa (todos os
-  dias da semana, com horário e o "como executar" de cada tarefa) e registra cada item
-  automaticamente — é isso que alimenta o checklist diário.
+- **Onboarding** (`/onboarding`): a pessoa escolhe entre dois modos antes de começar a sessão 1
+  (fica salvo por conta, não muda mais depois):
+  - **Mentor IA em chat**: conversa em tempo real, o mentor ensina cada conceito antes de
+    perguntar e só avança quando cobre tudo. Tem custo de API (Anthropic) a cada mensagem.
+  - **Aula + respostas**: mostra o conteúdo escrito (e o vídeo, quando você gravar) de cada
+    sessão, com um formulário de perguntas abaixo. **Sem custo de IA** — na sessão 4, os
+    hábitos são criados diretamente pelo formulário conforme a pessoa preenche.
+  Nos dois modos, a **sessão 4** termina com a agenda semanal completa (todos os dias, com o
+  "como executar" de cada tarefa) alimentando o checklist diário.
 - **Checklist diário** (`/dashboard`): gerado automaticamente todo dia a partir dos hábitos
   ativos agendados pro dia da semana atual (a agenda que o mentor montou na sessão 4).
 - **Avatar / progresso**: segue a mesma regra do seu método — um "dia perfeito" é quando todos
@@ -115,14 +118,18 @@ A forma mais simples é usar a [Vercel](https://vercel.com) (grátis pra esse vo
   difícil). Edite os textos direto na tabela `lessons` pelo **Table Editor** do Supabase, ou
   adicione novas aulas ali mesmo.
 
-## Editar o conteúdo das aulas ou o roteiro do mentor IA
+## Editar o conteúdo das aulas, do onboarding ou os vídeos das sessões
 
-- **Aulas**: Supabase → **Table Editor** → tabela `lessons`. Dá pra editar texto, adicionar ou
-  remover aulas direto pela interface, sem mexer em código.
-- **Roteiro do mentor IA**: arquivo [`src/lib/mentor/sessions.ts`](./src/lib/mentor/sessions.ts).
-  Cada sessão tem um `script` em texto — é literalmente o que o mentor IA vai ensinar e
-  perguntar. Editar esse texto muda o comportamento da IA na hora, sem precisar mexer em mais
-  nada.
+- **Aulas do módulo de mentalidade**: Supabase → **Table Editor** → tabela `lessons`. Dá pra
+  editar texto, adicionar ou remover aulas direto pela interface, sem mexer em código.
+- **Link do vídeo de cada sessão do onboarding** (modo "aula + respostas"): Supabase →
+  **Table Editor** → tabela `onboarding_session_videos`. Cole o link do YouTube ou Vimeo na
+  linha da sessão (1 a 5) assim que gravar — aparece automaticamente no site, sem precisar
+  mexer em código nem publicar de novo.
+- **Texto/roteiro de cada sessão** (os dois modos): arquivo
+  [`src/lib/mentor/sessions.ts`](./src/lib/mentor/sessions.ts). `teachingContent` e
+  `questions` são o texto e as perguntas do modo "aula"; `script` é o roteiro que guia o
+  mentor IA no modo chat.
 
 ## Limitações conhecidas deste piloto
 

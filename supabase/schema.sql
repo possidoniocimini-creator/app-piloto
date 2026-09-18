@@ -14,6 +14,7 @@ create table if not exists public.profiles (
   full_name text not null default 'Mentorado',
   onboarding_completed boolean not null default false,
   onboarding_step int not null default 1,
+  onboarding_mode text check (onboarding_mode in ('chat', 'lesson')),
   cycle_start_date date,
   created_at timestamptz not null default now()
 );
@@ -96,6 +97,47 @@ create policy "Usuário gerencia o próprio progresso nas sessões"
   to authenticated
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
+
+-- ----------------------------------------------------------------------------
+-- ONBOARDING_ANSWERS: respostas de reflexão do modo "aula" (sem IA em tempo real)
+-- Dados sensíveis/pessoais -> só o dono acessa
+-- ----------------------------------------------------------------------------
+create table if not exists public.onboarding_answers (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  session_number int not null check (session_number between 1 and 5),
+  question_key text not null,
+  answer text not null default '',
+  updated_at timestamptz not null default now(),
+  unique (user_id, session_number, question_key)
+);
+
+alter table public.onboarding_answers enable row level security;
+
+create policy "Usuário gerencia as próprias respostas"
+  on public.onboarding_answers for all
+  to authenticated
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+-- ----------------------------------------------------------------------------
+-- ONBOARDING_SESSION_VIDEOS: link do vídeo de cada sessão (edite pelo Table Editor)
+-- ----------------------------------------------------------------------------
+create table if not exists public.onboarding_session_videos (
+  session_number int primary key check (session_number between 1 and 5),
+  video_url text
+);
+
+alter table public.onboarding_session_videos enable row level security;
+
+create policy "Qualquer pessoa autenticada pode ler os vídeos"
+  on public.onboarding_session_videos for select
+  to authenticated
+  using (true);
+
+insert into public.onboarding_session_videos (session_number, video_url)
+values (1, null), (2, null), (3, null), (4, null), (5, null)
+on conflict (session_number) do nothing;
 
 -- ----------------------------------------------------------------------------
 -- HABITS: hábitos estruturados definidos na sessão 4 (viram o checklist diário)
