@@ -60,43 +60,11 @@ export function LessonSessionForm({
   );
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [generating, setGenerating] = useState(false);
 
   const isHabitStep = session.number === 4;
   const isGoalStep = session.number === 2;
   const isLastStep = session.number === totalSessions;
   const embedUrl = videoUrl ? toYoutubeEmbed(videoUrl) : null;
-
-  async function generateAgenda() {
-    setGenerating(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/onboarding/generate-agenda", { method: "POST" });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.error ?? "Não foi possível gerar a agenda.");
-      }
-      const data: { habits: { title: string; description: string; weekdays: number[] }[] } =
-        await res.json();
-
-      const generated: HabitDraft[] = data.habits.map((h) => ({
-        id: `temp-${Math.random().toString(36).slice(2)}-${Date.now()}`,
-        title: h.title,
-        description: h.description,
-        weekdays: h.weekdays,
-        isNew: true,
-      }));
-
-      setHabits((prev) => {
-        const manuallyFilled = prev.filter((h) => h.title.trim().length > 0);
-        return [...manuallyFilled, ...generated];
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível gerar a agenda.");
-    } finally {
-      setGenerating(false);
-    }
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -273,25 +241,7 @@ export function LessonSessionForm({
         </div>
       )}
 
-      {isHabitStep && (
-        <div className="space-y-4">
-          <div className="card flex flex-col items-center gap-3 text-center">
-            <p className="text-white/70">
-              Já respondeu tudo acima? Deixa a IA montar sua agenda semanal a partir do que você
-              escreveu nas sessões anteriores — depois você pode ajustar cada hábito à vontade.
-            </p>
-            <button
-              type="button"
-              onClick={generateAgenda}
-              disabled={generating}
-              className="btn-primary"
-            >
-              {generating ? "Gerando sua agenda..." : "Gerar minha agenda com IA"}
-            </button>
-          </div>
-          <HabitBuilder habits={habits} onChange={setHabits} />
-        </div>
-      )}
+      {isHabitStep && <HabitBuilder habits={habits} onChange={setHabits} />}
 
       {error && <p className="text-sm text-accent-danger">{error}</p>}
 

@@ -9,7 +9,6 @@ const LINKS = [
   { href: "/diario", label: "Diário" },
   { href: "/ranking", label: "Ranking" },
   { href: "/aulas", label: "Aulas" },
-  { href: "/duvidas", label: "Dúvidas" },
 ];
 
 export function Nav() {

@@ -22,8 +22,6 @@ create table if not exists public.journal_entries (
   went_well text not null default '',
   went_wrong text not null default '',
   difficulty text not null default '',
-  recommended_lesson_slug text,
-  recommended_note text,
   created_at timestamptz not null default now(),
   unique (user_id, entry_date)
 );
@@ -55,29 +53,6 @@ create policy "Usuario gerencia as proprias conquistas"
   to authenticated
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
-
--- ----------------------------------------------------------------------------
--- MENTOR_QA_MESSAGES: assistente 24h pra dúvidas (fora das sessões de onboarding)
--- ----------------------------------------------------------------------------
-create table if not exists public.mentor_qa_messages (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users (id) on delete cascade,
-  role text not null check (role in ('user', 'assistant')),
-  content text not null,
-  created_at timestamptz not null default now()
-);
-
-alter table public.mentor_qa_messages enable row level security;
-
-drop policy if exists "Usuario gerencia as proprias mensagens de duvida" on public.mentor_qa_messages;
-create policy "Usuario gerencia as proprias mensagens de duvida"
-  on public.mentor_qa_messages for all
-  to authenticated
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
-
-create index if not exists mentor_qa_messages_user_idx
-  on public.mentor_qa_messages (user_id, created_at);
 
 -- ----------------------------------------------------------------------------
 -- STORAGE: bucket pra imagem de visão (avatar escolhido pela pessoa)
