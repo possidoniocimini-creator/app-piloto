@@ -27,7 +27,7 @@ declare
   duration_choices int[] := array[90, 180, 270, 365];
   num_habits int;
   h int;
-  habit_id uuid;
+  v_habit_id uuid;
   habit_weekdays smallint[];
   d date;
   wd smallint;
@@ -81,14 +81,14 @@ begin
         habit_weekdays,
         true
       )
-      returning id into habit_id;
+      returning id into v_habit_id;
 
       for d in select generate_series(current_date - days_ago, current_date - 1, interval '1 day')::date loop
         wd := extract(dow from d)::smallint;
         if wd = any(habit_weekdays) then
           insert into public.checklist_entries (user_id, habit_id, entry_date, completed, completed_at)
           values (
-            new_user_id, habit_id, d,
+            new_user_id, v_habit_id, d,
             random() < consistency,
             case when random() < consistency then d::timestamptz + interval '19 hours' else null end
           )
