@@ -11,6 +11,7 @@ import { AvatarImage } from "@/components/AvatarImage";
 import { VisionImageUpload } from "@/components/VisionImageUpload";
 import { ChecklistCard, type ChecklistItem } from "@/components/ChecklistCard";
 import { CheckinCalendar } from "@/components/CheckinCalendar";
+import { ProgressChart } from "@/components/ProgressChart";
 
 const HABIT_FORMED_ACHIEVEMENT = "habit_formed_21_days";
 
@@ -121,6 +122,8 @@ export default async function DashboardPage() {
       </div>
 
       <ChecklistCard items={items} userId={user.id} today={todayKey} />
+
+      <ProgressChart habits={allHabits} entries={allEntries} />
 
       <CheckinCalendar habits={allHabits} entries={allEntries} />
     </div>
